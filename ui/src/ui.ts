@@ -65,7 +65,9 @@ export function bond<TProps, TState extends Renderable>(ctor: (props: TProps) =>
   }
 }
 
-let _wave: Wave | null = null
+let
+  _wave: Wave | null = null,
+  submissionName = ''
 
 const
   args: Rec = {},
@@ -149,13 +151,15 @@ export const
 
     // Unconditionally set location hash so that the app doesn't have to track changes.
     const h = window.location.hash
-    if (h?.length > 1) args['#'] = h.substr(1)
+    if (h?.length > 1) args['#'] = h.substring(1)
+    if (submissionName) args['__wave_submission_name__'] = submissionName
 
     const d: Dict<any> = { ...args } // shallow clone
     clearRec(args) // clear
     _wave.push(d) // push clone
     busyB(true)
     argsB(d)
+    submissionName = ''
   },
   wave = { // Public API
     baseURL,
@@ -163,7 +167,12 @@ export const
     uploadURL,
     initURL,
     loginURL,
-    args,
+    args: new Proxy(args, {
+      set(target, key, value) {
+        submissionName = key.toString()
+        return Reflect.set(target, key, value)
+      },
+    }),
     debounce,
     throttle,
     push,
@@ -178,6 +187,7 @@ export const
       event[name] = data
       events[source] = event
       args[''] = events // '' is special-cased in clients
+      submissionName = source
       push()
     }
   };
